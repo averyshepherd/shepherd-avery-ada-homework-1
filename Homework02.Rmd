@@ -14,7 +14,7 @@ library(tidyverse)
 library(cowplot)
 ```
 
-
+## Challenge 01
 ```{r}
 f <- "https://raw.githubusercontent.com/difiore/ADA-datasets/master/IMDB-movies.csv"
 d <- read_csv(f,  col_names = T)
@@ -42,7 +42,10 @@ new_d %>% ggplot(aes(x = runtimeMinutes)) +
 
 Use a one-line statement to calculate the population mean and population standard deviation in runtimeMinutes for each decade and save the results in a new dataframe, results.
 ```{r}
-results <- new_d %>% group_by(decade) %>% summarise(runtime_mean = mean(runtimeMinutes), std_dev = sd(runtimeMinutes), name = "pop")
+pop_sd <- function(x) {
+  sqrt((length(x)-1)/length(x)) * sd(x)
+}
+results <- new_d %>% group_by(decade) %>% summarise(runtime_mean = mean(runtimeMinutes), std_dev = pop_sd(runtimeMinutes), name = "pop")
 results
 ```
 
@@ -86,6 +89,77 @@ Finally, compare the standard error in runtimeMinutes for samples of size 100 fr
 standard_errors <- rbind(sample_results, results, distribution_results)
 ggplot(data = standard_errors, aes(x = name, y = std_dev)) + 
   geom_point() + facet_wrap(~ decade)
+```
+
+## Challenge 02
+Every morning at the same time, a bee bioloigist goes and sits in a field in the morning and watches for forager bees returning to a hive, counting the number that arrive in a one hour window from 7am to 8am. Based on previous knowledge, she believes that the mean number of foragers that will return in that time is 12, roughly one every 6 minutes. Let X represent the appropriate Poisson random variable of the number of arriving bees each monitoring session.
+
+What is the probability that she will see 9 or fewer bees arrive during any given session?
+```{r}
+l = 6
+x = c(0:9)
+sum(dpois(x, l))
+```
+
+What is the probability that she will see no bees arrive in a session?
+```{r}
+x = 0
+dpois(x, l)
+```
+
+What is the probability that she will see exactly 5 bees arrive in a session?
+```{r}
+x = 5
+dpois(x, l)
+```
+
+What is the probability that she will see more than 18 bees arrive in a session?
+```{r}
+x = c(0:18)
+1 - sum(dpois(x, l))
+```
+
+Plot the relevant Poisson mass function over the values in range 0 ≤ x ≤ 24.
+```{r}
+x <- c(0:24)
+prob <- dpois(x, l)
+data.frame(cbind(x, prob)) %>% ggplot(aes(x, prob)) + geom_point()
+```
+
+
+```{r}
+f <- "https://raw.githubusercontent.com/difiore/ada-2021-datasets/master/zombies.csv"
+d <- read_csv(f, col_names = T)
+```
+
+Calculate the population mean and standard deviation for each quantitative random variable (height, weight, age, number of zombies killed, and years of education). Use {ggplot} and make boxplots of each of these variables by gender
+```{r}
+means <- d %>% summarise(m_height = mean(height), 
+                m_weight = mean(weight), 
+                m_age = mean(age), 
+                m_kills = mean(zombies_killed), 
+                m_edu = mean(years_of_education))
+pop_sds <- d %>% summarise(sd_height = pop_sd(height), 
+                sd_weight = pop_sd(weight),
+                sd_age = pop_sd(age),
+                sd_kills = pop_sd(zombies_killed),
+                sd_edu = pop_sd(years_of_education))
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
 ```
 
 
