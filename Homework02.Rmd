@@ -36,7 +36,7 @@ new_d
 
 ```{r}
 new_d %>% ggplot(aes(x = runtimeMinutes)) +
-  geom_histogram() + 
+  geom_histogram() +
   facet_wrap(~ decade)
 ```
 
@@ -79,7 +79,8 @@ Then, calculate the MEAN and the STANDARD DEVIATION of the sampling distribution
 ```
 
 plot a histogram of the sampling distribution. What shape does it have?
-*normally distributed*
+
+**normally distributed**
 ```{r}
 ggplot(s, aes(x = runtime_mean)) + geom_histogram() + facet_wrap(~ decade)
 ```
@@ -87,7 +88,7 @@ ggplot(s, aes(x = runtime_mean)) + geom_histogram() + facet_wrap(~ decade)
 Finally, compare the standard error in runtimeMinutes for samples of size 100 from each decade [1] as estimated from your first sample of 100 movies, [2] as calculated from the known population standard deviations for each decade, and [3] as estimated from the sampling distribution of sample means.
 ```{r}
 standard_errors <- rbind(sample_results, results, distribution_results)
-ggplot(data = standard_errors, aes(x = name, y = std_dev)) + 
+ggplot(data = standard_errors, aes(x = name, y = std_dev)) +
   geom_point() + facet_wrap(~ decade)
 ```
 
@@ -126,6 +127,7 @@ prob <- dpois(x, l)
 data.frame(cbind(x, prob)) %>% ggplot(aes(x, prob)) + geom_point()
 ```
 
+##Challenge 03
 
 ```{r}
 f <- "https://raw.githubusercontent.com/difiore/ada-2021-datasets/master/zombies.csv"
@@ -134,45 +136,153 @@ d <- read_csv(f, col_names = T)
 
 Calculate the population mean and standard deviation for each quantitative random variable (height, weight, age, number of zombies killed, and years of education). Use {ggplot} and make boxplots of each of these variables by gender
 ```{r}
-means <- d %>% summarise(m_height = mean(height), 
+d %>% summarise(m_height = mean(height), 
                 m_weight = mean(weight), 
                 m_age = mean(age), 
                 m_kills = mean(zombies_killed), 
                 m_edu = mean(years_of_education))
-pop_sds <- d %>% summarise(sd_height = pop_sd(height), 
+d %>% summarise(sd_height = pop_sd(height), 
                 sd_weight = pop_sd(weight),
                 sd_age = pop_sd(age),
                 sd_kills = pop_sd(zombies_killed),
                 sd_edu = pop_sd(years_of_education))
+```
+
+Use {ggplot} and make boxplots of each of these variables by gender.
+```{r}
+plot_grid(ggplot(d, aes(x = gender, y = weight)) + geom_boxplot(),
+          ggplot(d, aes(x = gender, y = height)) + geom_boxplot(),
+          ggplot(d, aes(x = gender, y = age)) + geom_boxplot(),
+          ggplot(d, aes(x = gender, y = zombies_killed)) + geom_boxplot(),
+          ggplot(d, aes(x = gender, y = years_of_education)) + geom_boxplot())
+```
+
+Use {ggplot2} and make scatterplots of height and weight in relation to age, using different colored points for males versus females. Do these variables seem to be related? In what way?
+
+**seem to be positively linearly related**
+```{r}
+ggplot(d, aes(x = height, y = weight, color = gender)) + geom_point()
+```
+
+Using histograms and Q-Q plots, check whether the quantitative variables seem to be drawn from a normal distribution. Which seem to be and which do not?
+
+**kills and education seem to be right skewed, perhaps from a geometric distribution**
+```{r}
+plot_grid(ggplot(d, aes(x = height)) + geom_histogram(bins = 10),
+          ggplot(d, aes(x = weight)) + geom_histogram(bins = 10),
+          ggplot(d, aes(x = age)) + geom_histogram(bins = 10),
+          ggplot(d, aes(x = zombies_killed)) + geom_histogram(bins = 10),
+          ggplot(d, aes(x = years_of_education)) + geom_histogram(bins = 10),
+          label = c("height", "weight", "age", "kills", "edu"))
+
+plot_grid(ggplot(d, aes(sample = height)) + stat_qq(),
+          ggplot(d, aes(sample = weight)) + stat_qq(),
+          ggplot(d, aes(sample = age)) + stat_qq(),
+          ggplot(d, aes(sample = zombies_killed)) + stat_qq(),
+          ggplot(d, aes(sample = years_of_education)) + stat_qq(),
+          label = c("height", "weight", "age", "kills", "edu"))
+```
+
+Now use the sample_n() function from {dplyr} to sample ONE subset of 50 zombie apocalypse survivors (without replacement) from this population and calculate the mean and sample standard deviation for each variable. Also estimate the standard error for each variable based on this sample and use that to construct a 95% confidence interval for each mean.
+```{r}
+set.seed(100)
+zombie_sample <- d %>% sample_n(50)
+samp_sd <- zombie_sample %>% summarise(sd_height = sd(height), 
+                sd_weight = sd(weight),
+                sd_age = sd(age),
+                sd_kills = sd(zombies_killed),
+                sd_edu = sd(years_of_education))
+sam_sum <- zombie_sample %>% summarise(m_height = mean(height), 
+                m_weight = mean(weight), 
+                m_age = mean(age), 
+                m_kills = mean(zombies_killed), 
+                m_edu = mean(years_of_education),
+                se_height=sd(height) / sqrt(50),
+                se_weight=sd(weight) / sqrt(50),
+                se_age=sd(age) / sqrt(50),
+                se_kills=sd(zombies_killed) / sqrt(50),
+                se_edu=sd(years_of_education) / sqrt(50))
+ci_95 <- function(m, se) {
+  m + c(-1, 1) + qnorm(1- .05 / 2) * se
+}
+(ci_sam <- sam_sum %>% summarise(height = ci_95(m_height, se_height),
+                                weight = ci_95(m_weight, se_weight),
+                                age = ci_95(m_age, se_age),
+                                kills = ci_95(m_kills, se_kills),
+                                edu = ci_95(m_edu, se_edu), source = "sample"))
 
 ```
 
-
+Then draw another 99 random samples of 50 zombie apocalypse survivors out and calculate the mean for each of the these samples. Together with the first sample you drew out, you now have a set of 100 means for each variable (each based on 50 observations), which constitutes a sampling distribution for each variable. What are the means and standard deviations of the sampling distribution for each variable?
 ```{r}
+zombies_distribution <- data.frame()
+for (i in 1:99) {
+  smple <- d %>% sample_n(50) %>% summarise(m_height = mean(height), 
+                m_weight = mean(weight), 
+                m_age = mean(age), 
+                m_kills = mean(zombies_killed), 
+                m_edu = mean(years_of_education),
+                se_height = sd(height), 
+                se_weight = sd(weight),
+                se_age = sd(age),
+                se_kills = sd(zombies_killed),
+                se_edu = sd(years_of_education))
+  zombies_distribution <- rbind(zombies_distribution, smple)
+}
+zombies_distribution <- rbind(zombies_distribution, sam_sum)
 
+dist_sum <- zombies_distribution %>% summarise(m_height = mean(m_height), 
+                m_weight = mean(m_weight), 
+                m_age = mean(m_age), 
+                m_kills = mean(m_kills), 
+                m_edu = mean(m_edu),
+                se_height = sd(se_height), 
+                se_weight = sd(se_weight),
+                se_age = sd(se_age),
+                se_kills = sd(se_kills),
+                se_edu = sd(se_edu))
+```
+
+Finally, construct an 95% confidence interval for each mean directly from the sampling distribution of sample means using the central 95% that distribution
+```{r}
+(ci_dist <- dist_sum %>% summarise(height = ci_95(m_height, se_height),
+                                weight = ci_95(m_weight, se_weight),
+                                age = ci_95(m_age, se_age),
+                                kills = ci_95(m_kills, se_kills),
+                                edu = ci_95(m_edu, se_edu), source = "dist"))
+```
+
+How do the standard deviations of the sampling distribution for each variable compare to the standard errors estimated from your first sample of size 50?
+
+**the sampling distibution has a much lower standard deviation than the one sample**
+```{r}
+weight <- data.frame(dev = c(samp_sd$sd_weight, dist_sum$se_weight), orig = c("sample", "dist")) %>% ggplot(aes(x = orig, y = dev)) + geom_point()
+height <- data.frame(dev = c(samp_sd$sd_height, dist_sum$se_height), orig = c("sample", "dist")) %>% ggplot(aes(x = orig, y = dev)) + geom_point()
+age <- data.frame(dev = c(samp_sd$sd_age, dist_sum$se_age), orig = c("sample", "dist")) %>% ggplot(aes(x = orig, y = dev)) + geom_point()
+kills <- data.frame(dev = c(samp_sd$sd_kills, dist_sum$se_kills), orig = c("sample", "dist")) %>% ggplot(aes(x = orig, y = dev)) + geom_point()
+edu <- data.frame(dev = c(samp_sd$sd_edu, dist_sum$se_edu), orig = c("sample", "dist")) %>% ggplot(aes(x = orig, y = dev)) + geom_point()
+
+plot_grid(height, weight, age, kills, edu, label = c("height", "weight", "age", "kills", "edu"))
+```
+
+What do sampling distributions for each variable mean look like? Are they normally distributed? What about for those variables that you concluded were not originally drawn from a normal distribution?
+
+**All of the variables look mostly normally distributed, though education still has a bit of a right skew. This could be because of the discrete values though.**
+```{r}
+plot_grid(ggplot(zombies_distribution, aes(x = m_height)) + geom_histogram(bins = 15),
+          ggplot(zombies_distribution, aes(x = m_weight)) + geom_histogram(bins = 15),
+          ggplot(zombies_distribution, aes(x = m_age)) + geom_histogram(bins = 15),
+          ggplot(zombies_distribution, aes(x = m_kills)) + geom_histogram(bins = 15),
+          ggplot(zombies_distribution, aes(x = m_edu)) + geom_histogram(bins = 15))
 ```
 
 
+How do the two 95% CIs you estimated compare to one another (i.e., the CI based on one sample and its estimated standard deviation versus the CI based on simulation)?
 ```{r}
-
-```
-
-
-```{r}
-
-```
-
-
-```{r}
-
-```
-
-
-```{r}
-
-```
-
-
-```{r}
-
+ci_all <- rbind(ci_dist, ci_sam) 
+plot_grid(ggplot(ci_all, aes(y = height, x = source)) + geom_point(),
+          ggplot(ci_all, aes(y = weight, x = source)) + geom_point(),
+          ggplot(ci_all, aes(y = age, x = source)) + geom_point(),
+          ggplot(ci_all, aes(y = kills, x = source)) + geom_point(),
+          ggplot(ci_all, aes(y = edu, x = source)) + geom_point())
 ```
